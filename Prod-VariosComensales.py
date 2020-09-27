@@ -3,7 +3,7 @@ import time
 import logging
 
 logging.basicConfig(format='%(asctime)s.%(msecs)03d [%(threadName)s] - %(message)s', datefmt='%H:%M:%S', level=logging.INFO)
-
+semaphore = threading.Semaphore(1)
 
 def productor(monitor):
     print("Voy a producir")
@@ -25,8 +25,9 @@ class Consumidor(threading.Thread):
             with self.monitor:          # Hace el acquire y al final un release    
                 while len(items)<1:     # si no hay ítems para consumir
                     self.monitor.wait()  # espera la señal, es decir el notify
+                semaphore.acquire()
                 x = items.pop(0)     # saca (consume) el primer ítem
-            
+                semaphore.release()
             logging.info(f'Consumí {x}')
             time.sleep(1)
 
@@ -39,9 +40,12 @@ class Consumidor2(threading.Thread):
         while (True):
             
             with self.monitor:          # Hace el acquire y al final un release    
-                while len(items)<1:     # si no hay ítems para consumir
-                    self.monitor.wait()  # espera la señal, es decir el notify
-                x = items.pop(0)     # saca (consume) el primer ítem
+                while len(items)<1:
+                    self.monitor.wait()
+                semaphore.acquire()     # si no hay ítems para consumir
+                x = items.pop(0)    
+                semaphore.release()  # espera la señal, es decir el notify
+                     # saca (consume) el primer ítem
             
             logging.info(f'Consumí {x}')
             time.sleep(1)
@@ -57,9 +61,8 @@ items_monit = threading.Condition()
 cons1 = Consumidor(items_monit)
 cons1.start()
 
+cons2 = Consumidor2(items_monit)
+cons2.start()
+
 # El productor
 productor(items_monit)
-
-
-
-        
